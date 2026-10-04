@@ -1,0 +1,17 @@
+# Core
+torch>=2.1
+torchaudio>=2.1
+transformers>=4.49        # SigLIP2 support landed in 4.49
+datasets>=2.18            # Audio + Video features
+huggingface_hub
+numpy
+Pillow
+scikit-learn              # split + metrics (optional but recommended)
+
+# Video decoding (decord preferred; opencv is the fallback)
+decord                    # fast frame + audio decoding
+opencv-python-headless    # fallback frame decoder
+
+# Audio backend for datasets' Audio feature
+soundfile
+librosa
