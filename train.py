@@ -9,6 +9,7 @@ Example
     python train.py --epochs 20 --batch-size 8 --num-frames 8 \
                     --output-dir ./ckpt --subject-independent
 """
+
 from __future__ import annotations
 
 import argparse
@@ -54,13 +55,12 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--lr", type=float, default=1e-3)
     p.add_argument("--weight-decay", type=float, default=1e-4)
     p.add_argument("--val-ratio", type=float, default=0.2)
-    p.add_argument("--subject-independent", action="store_true",
-                   help="actor-disjoint train/val split (standard RAVDESS protocol)")
+    p.add_argument("--subject-independent", action="store_true", help="actor-disjoint train/val split (standard RAVDESS protocol)")
     p.add_argument("--num-workers", type=int, default=16)
     p.add_argument("--seed", type=int, default=42)
     p.add_argument("--amp", action="store_true", help="mixed precision on CUDA")
     p.add_argument("--limit", type=int, default=0, help="debug: cap #samples (0=all)")
-    p.add_argument("--cache-dir", default='./hf_cache')
+    p.add_argument("--cache-dir", default="./hf_cache")
     p.add_argument("--output-dir", default="./ckpt")
     p.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
     return p.parse_args()
@@ -105,14 +105,15 @@ def main():
     print(f"{len(ds)} clips, {len(classes)} classes: {classes}")
 
     train_idx, val_idx, tst_idx, subj = make_split(
-        ds, val_ratio=args.val_ratio, seed=args.seed,
+        ds,
+        val_ratio=args.val_ratio,
+        seed=args.seed,
         subject_independent=args.subject_independent,
     )
     if args.limit:
         train_idx = train_idx[: args.limit]
         val_idx = val_idx[: max(1, args.limit // 4)]
-    print(f"Split: train={len(train_idx)} val={len(val_idx)} "
-          f"({'subject-independent' if subj else 'stratified'})")
+    print(f"Split: train={len(train_idx)} val={len(val_idx)} " f"({'subject-independent' if subj else 'stratified'})")
 
     train_ds = RavdessAVDataset(ds.select(train_idx), args.num_frames, args.max_audio_seconds)
     val_ds = RavdessAVDataset(ds.select(val_idx), args.num_frames, args.max_audio_seconds)
@@ -121,12 +122,9 @@ def main():
     image_processor, feature_extractor = load_processors(args.siglip_id, args.wav2vec2_id)
     collate = AVCollator(image_processor, feature_extractor, args.num_frames)
 
-    train_loader = DataLoader(train_ds, batch_size=args.batch_size, shuffle=True,
-                              num_workers=args.num_workers, collate_fn=collate, drop_last=False)
-    val_loader = DataLoader(val_ds, batch_size=args.batch_size, shuffle=False,
-                            num_workers=args.num_workers, collate_fn=collate)
-    test_loader = DataLoader(tst_ds, batch_size=args.batch_size, shuffle=False,
-                            num_workers=args.num_workers, collate_fn=collate)
+    train_loader = DataLoader(train_ds, batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers, collate_fn=collate, drop_last=False)
+    val_loader = DataLoader(val_ds, batch_size=args.batch_size, shuffle=False, num_workers=args.num_workers, collate_fn=collate)
+    test_loader = DataLoader(tst_ds, batch_size=args.batch_size, shuffle=False, num_workers=args.num_workers, collate_fn=collate)
 
     # ---- model ----
     model = AVEmotionModel(
@@ -140,8 +138,7 @@ def main():
     n_train = sum(p.numel() for p in model.trainable_parameters())
     print(f"Trainable params (MLP only): {n_train:,}")
 
-    optimizer = torch.optim.AdamW(model.trainable_parameters(), lr=args.lr,
-                                  weight_decay=args.weight_decay)
+    optimizer = torch.optim.AdamW(model.trainable_parameters(), lr=args.lr, weight_decay=args.weight_decay)
     criterion = nn.CrossEntropyLoss()
     use_amp = args.amp and device.type == "cuda"
     try:
@@ -174,30 +171,34 @@ def main():
             correct += (logits.argmax(-1) == labels).sum().item()
             seen += labels.size(0)
             if step % 20 == 0:
-                print(f"  epoch {epoch} step {step}/{len(train_loader)} "
-                      f"loss={running/seen:.4f} acc={correct/seen:.4f}")
+                print(f"  epoch {epoch} step {step}/{len(train_loader)} " f"loss={running/seen:.4f} acc={correct/seen:.4f}")
 
         val_loss, val_acc, _, _ = evaluate(model, val_loader, device, criterion)
         test_loss, test_acc, _, _ = evaluate(model, test_loader, device, criterion)
-        print(f"[epoch {epoch}] train_loss={running/max(seen,1):.4f} "
-              f"train_acc={correct/max(seen,1):.4f} | val_loss={val_loss:.4f} val_acc={val_acc:.4f} | test_loss={test_loss:.4f} test_acc={test_acc:.4f}")
+        print(
+            f"[epoch {epoch}] train_loss={running/max(seen,1):.4f} "
+            f"train_acc={correct/max(seen,1):.4f} | val_loss={val_loss:.4f} val_acc={val_acc:.4f} | test_loss={test_loss:.4f} test_acc={test_acc:.4f}"
+        )
 
         if val_acc >= best_acc:
             best_acc = val_acc
-            torch.save({
-                "classifier_state": model.classifier.state_dict(),
-                "label_names": classes,
-                "config": {
-                    "siglip_id": args.siglip_id,
-                    "wav2vec2_id": args.wav2vec2_id,
-                    "num_frames": args.num_frames,
-                    "max_audio_seconds": args.max_audio_seconds,
-                    "hidden_dim": args.hidden_dim,
-                    "dropout": args.dropout,
-                    "video_dim": model.video_dim,
-                    "audio_dim": model.audio_dim,
+            torch.save(
+                {
+                    "classifier_state": model.classifier.state_dict(),
+                    "label_names": classes,
+                    "config": {
+                        "siglip_id": args.siglip_id,
+                        "wav2vec2_id": args.wav2vec2_id,
+                        "num_frames": args.num_frames,
+                        "max_audio_seconds": args.max_audio_seconds,
+                        "hidden_dim": args.hidden_dim,
+                        "dropout": args.dropout,
+                        "video_dim": model.video_dim,
+                        "audio_dim": model.audio_dim,
+                    },
                 },
-            }, best_path)
+                best_path,
+            )
             print(f"  -> saved best checkpoint (val_acc={best_acc:.4f}) to {best_path}")
 
     ckpt = torch.load(best_path, map_location=device)
