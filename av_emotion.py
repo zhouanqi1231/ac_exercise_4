@@ -358,7 +358,27 @@ class AVEmotionModel(nn.Module):
         # Implement your classifier here
         #######################################################
 
-        self.classifier = 
+        print("video_dim")
+        print(self.video_dim)
+        print("audio_dim")
+        print(self.audio_dim)
+        print("hidden_dim")
+        print(hidden_dim)
+        print("dropout")
+        print(dropout)
+        print("num_classes")
+        print(num_classes)
+
+        # 2 layers (input, hidden dim, hidden dim, output)
+        self.classifier = nn.Sequential(
+            nn.Linear(self.video_dim + self.audio_dim, hidden_dim),
+            nn.ReLU(),  # activation function (only positive)
+            nn.Dropout(dropout),
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Dropout(dropout),
+            nn.Linear(hidden_dim, num_classes),
+        )
 
         if freeze:
             for p in self.video_model.parameters():
