@@ -29,4 +29,4 @@ module load python-pytorch/2.10
 export HF_HOME=/scratch/project_2020210/.cache/huggingface
 
 # Run the training here
-srun python train.py --subject-independent --limit 10 --epochs 1 --hidden-dim 512 --dropout 0.3
+srun python train.py --subject-independent --limit 8 --epochs 1 --hidden-dim 128 --dropout 0.3
