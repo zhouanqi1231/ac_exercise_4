@@ -20,6 +20,7 @@ Fusion       : concat([video, audio]) -> MLP -> num_classes logits.
 
 Only the fusion MLP is trained; both backbones stay in eval() and require_grad=False.
 """
+
 from __future__ import annotations
 
 import os
@@ -69,6 +70,7 @@ def load_audio(audio_field, target_sr=TARGET_SR):
         wav = librosa.resample(wav, orig_sr=sr, target_sr=target_sr)
     return np.ascontiguousarray(wav, dtype=np.float32)
 
+
 # ---------------------------------------------------------------------------
 # Dataset loading
 # ---------------------------------------------------------------------------
@@ -81,7 +83,7 @@ def load_ravdess(split: str = "test", cache_dir: Optional[str] = None):
     """
     from datasets import load_dataset, Audio
 
-    ds = load_dataset('/scratch/project_2020210/dataset', split=split)
+    ds = load_dataset("/scratch/project_2020210/dataset", split=split)
     ds = ds.cast_column("audio", Audio(decode=False))
     try:
         from datasets import Video
@@ -310,10 +312,10 @@ class AVCollator:
             input_lengths = torch.tensor([len(a) for a in audios], dtype=torch.long)
 
         return {
-            "pixel_values": pixel_values,                      # (B*N, 3, H, W)
-            "n_frames": self.num_frames,                       # int
-            "input_values": fe["input_values"],                # (B, T)
-            "input_lengths": input_lengths,                    # (B,)
+            "pixel_values": pixel_values,  # (B*N, 3, H, W)
+            "n_frames": self.num_frames,  # int
+            "input_values": fe["input_values"],  # (B, T)
+            "input_lengths": input_lengths,  # (B,)
             "labels": torch.tensor(labels, dtype=torch.long),  # (B,)
         }
 
@@ -407,7 +409,7 @@ class AVEmotionModel(nn.Module):
         ctx = torch.no_grad() if self.freeze else nullcontext()
         with ctx:
             hidden = self.audio_model(input_values=input_values).last_hidden_state  # (B, T, Da)
-            return _masked_mean(self.audio_model, hidden, input_lengths)            # (B, Da)
+            return _masked_mean(self.audio_model, hidden, input_lengths)  # (B, Da)
 
     def forward(self, pixel_values, n_frames, input_values, input_lengths=None, labels=None):
         v = self.encode_video(pixel_values, n_frames)
@@ -416,7 +418,6 @@ class AVEmotionModel(nn.Module):
         ###########################################################################
         # Concatenate the encodings, run the classifier and return the results.
         ###########################################################################
-
 
     def trainable_parameters(self):
         return [p for p in self.parameters() if p.requires_grad]
@@ -464,14 +465,14 @@ def make_split(ds, val_ratio: float = 0.2, seed: int = 42, subject_independent: 
             train_idx = [i for i, a in enumerate(actors) if a not in val_actors]
             tmp_idx = [i for i, a in enumerate(actors) if a in val_actors]
             mid = len(tmp_idx) // 2
-            val_idx=tmp_idx[:mid]
-            tst_idx=tmp_idx[mid:]
+            val_idx = tmp_idx[:mid]
+            tst_idx = tmp_idx[mid:]
 
-            print('train idx')
+            print("train idx")
             print(train_idx)
-            print('val_idx')
+            print("val_idx")
             print(val_idx)
-            print('tst_idx')
+            print("tst_idx")
             print(tst_idx)
 
             return train_idx, val_idx, tst_idx, True
@@ -480,9 +481,7 @@ def make_split(ds, val_ratio: float = 0.2, seed: int = 42, subject_independent: 
     try:
         from sklearn.model_selection import train_test_split
 
-        train_idx, val_idx = train_test_split(
-            list(range(n)), test_size=val_ratio, random_state=seed, stratify=labels
-        )
+        train_idx, val_idx = train_test_split(list(range(n)), test_size=val_ratio, random_state=seed, stratify=labels)
     except Exception:
         rng = random.Random(seed)
         idx = list(range(n))
