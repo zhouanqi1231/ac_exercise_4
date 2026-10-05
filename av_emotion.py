@@ -419,6 +419,11 @@ class AVEmotionModel(nn.Module):
         # Concatenate the encodings, run the classifier and return the results.
         ###########################################################################
 
+        combined_feature = torch.cat((v, a), dim=1)
+
+        output = self.classifier(combined_feature)
+        return output
+
     def trainable_parameters(self):
         return [p for p in self.parameters() if p.requires_grad]
 
